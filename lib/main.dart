@@ -34,7 +34,7 @@ class CarakiApp extends StatelessWidget {
       listenable: state,
       builder: (context, _) {
         return MaterialApp(
-          title: 'Caraki — Ψηφιακό Βιβλίο Αυτοκινήτου',
+          title: 'Caraki',
           debugShowCheckedModeBanner: false,
           theme: CarakiTheme.lightTheme(),
           darkTheme: CarakiTheme.darkTheme(),
@@ -86,11 +86,11 @@ class _CarakiMainShellState extends State<CarakiMainShell> {
     }
 
     final titles = [
-      'Caraki Cockpit',
-      'Βιβλίο Service & Εξαρτήματα',
-      'Υπενθυμίσεις & ΚΤΕΟ',
+      'Επισκόπηση',
+      'Συντήρηση',
+      'Υπενθυμίσεις',
       'Καύσιμα & Έξοδα',
-      'Γκαράζ & Ρυθμίσεις',
+      'Γκαράζ',
     ];
 
     final pages = <Widget>[
@@ -119,51 +119,14 @@ class _CarakiMainShellState extends State<CarakiMainShell> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [CarakiTheme.primaryPapaya, Color(0xFFFF8800)],
-                ),
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: CarakiTheme.primaryPapaya.withValues(alpha: 0.35),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: const Icon(Icons.sports_motorsports_rounded, color: Colors.white, size: 20),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 250),
-                    child: Text(
-                      titles[_currentIndex],
-                      key: ValueKey('title_$_currentIndex'),
-                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17.5),
-                    ),
-                  ),
-                  if (vehicle != null)
-                    Text(
-                      '${vehicle.fullName} • ${vehicle.licensePlate}',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
+        titleSpacing: 20,
+        title: Text(
+          titles[_currentIndex],
+          style: const TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 22,
+            letterSpacing: -0.5,
+          ),
         ),
         actions: [
           if (vehicle != null)

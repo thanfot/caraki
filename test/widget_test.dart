@@ -23,7 +23,7 @@ void main() {
     await tester.pumpWidget(CarakiApp(state: state));
     await tester.pump(const Duration(seconds: 2));
 
-    expect(find.text('Caraki Cockpit'), findsOneWidget);
+    expect(find.text('Επισκόπηση'), findsOneWidget);
     expect(find.textContaining('Toyota Yaris'), findsWidgets);
 
     // Verify Unified Service Event resets serviced part health to 100%

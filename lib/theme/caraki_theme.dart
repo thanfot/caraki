@@ -2,28 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 class CarakiTheme {
-  // Warm Motorsport Palette (Papaya Orange, Racing Red, Asphalt Carbon, Warm Ivory)
-  static const Color primaryPapaya = Color(0xFFFF5500);
-  static const Color racingCrimson = Color(0xFFE11D48);
+  // Authentic Automotive Palette: High-contrast Obsidian, Warm Titanium, Signal Orange
+  static const Color primaryPapaya = Color(0xFFFF4D00);
+  static const Color racingCrimson = Color(0xFFE52535);
   static const Color warmGold = Color(0xFFF59E0B);
 
-  // Backward-compatible aliases so modals/screens use the new warm palette seamlessly
+  // Backward-compatible aliases
   static const Color primaryElectricBlue = primaryPapaya;
-  static const Color accentCyan = Color(0xFFFF8A00);
+  static const Color accentCyan = Color(0xFFFF7300);
 
-  // Automotive status colors (Emerald Mint, Warm Amber, Racing Red)
-  static const Color statusGreen = Color(0xFF00D68F);
-  static const Color statusAmber = Color(0xFFFF9F1C);
-  static const Color statusRed = Color(0xFFFF334B);
+  // High-contrast semantic status colors
+  static const Color statusGreen = Color(0xFF1ED760);
+  static const Color statusAmber = Color(0xFFFFA800);
+  static const Color statusRed = Color(0xFFFF3B30);
 
-  /// Returns status color based on health ratio (0.0 to 1.0)
   static Color healthColor(double ratio) {
     if (ratio <= 0.15) return statusRed;
     if (ratio <= 0.35) return statusAmber;
     return statusGreen;
   }
 
-  /// Returns status color based on remaining days for legal reminders
   static Color daysRemainingColor(int days) {
     if (days <= 7) return statusRed;
     if (days <= 30) return statusAmber;
@@ -45,84 +43,87 @@ class CarakiTheme {
   }
 
   static ThemeData darkTheme() {
-    const bgCarbon = Color(0xFF121214); // True Warm Asphalt Carbon
-    const cardGraphite = Color(0xFF1C1C21); // Matte Graphite Surface
-    const surfaceElevated = Color(0xFF27272E);
+    const bgObsidian = Color(0xFF000000); // True OLED Black for maximum contrast
+    const cardSurface = Color(0xFF161618); // Solid iOS Dark Elevated Surface (no borders!)
+    const secondarySurface = Color(0xFF242428);
 
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      scaffoldBackgroundColor: bgCarbon,
+      scaffoldBackgroundColor: bgObsidian,
       colorScheme: const ColorScheme.dark(
         primary: primaryPapaya,
         onPrimary: Colors.white,
-        secondary: Color(0xFFFF8A00),
+        secondary: Color(0xFFFF7300),
         onSecondary: Colors.black,
-        surface: cardGraphite,
-        surfaceContainerHighest: surfaceElevated,
+        surface: cardSurface,
+        onSurface: Color(0xFFFFFFFF),
+        surfaceContainerHighest: secondarySurface,
         error: statusRed,
       ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.transparent,
-        foregroundColor: Color(0xFFF5F5F7),
+        backgroundColor: bgObsidian,
+        foregroundColor: Colors.white,
         elevation: 0,
+        scrolledUnderElevation: 0,
         centerTitle: false,
       ),
       cardTheme: CardThemeData(
-        color: cardGraphite,
+        color: cardSurface,
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: BorderSide(color: Colors.white.withValues(alpha: 0.07), width: 1.2),
+          borderRadius: BorderRadius.circular(20),
+          // Zero colored or glowing borders! Pure surface hierarchy.
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: primaryPapaya,
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         ),
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         backgroundColor: primaryPapaya,
         foregroundColor: Colors.white,
-        elevation: 8,
+        elevation: 4,
         shape: StadiumBorder(),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: const Color(0xFF18181C),
-        indicatorColor: primaryPapaya.withValues(alpha: 0.22),
+        backgroundColor: const Color(0xFF0D0D0F),
+        indicatorColor: secondarySurface,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return const TextStyle(
               fontSize: 11.5,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFFFF6D24),
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
             );
           }
-          return TextStyle(
+          return const TextStyle(
             fontSize: 11.5,
             fontWeight: FontWeight.w500,
-            color: Colors.white.withValues(alpha: 0.55),
+            color: Color(0xFF8E8E93), // Native iOS secondary label color
           );
         }),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: surfaceElevated,
+        fillColor: secondarySurface,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: primaryPapaya, width: 2),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Colors.white, width: 1.5),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
@@ -130,83 +131,85 @@ class CarakiTheme {
   }
 
   static ThemeData lightTheme() {
-    const bgIvory = Color(0xFFF6F4F0); // Warm Porsche Chalk / Alabaster
-    const cardPure = Color(0xFFFFFFFF);
-    const surfaceSand = Color(0xFFEBE7E0);
+    const bgStone = Color(0xFFF2F2F7); // Native iOS grouped background
+    const cardWhite = Color(0xFFFFFFFF);
+    const secondaryFill = Color(0xFFE5E5EA);
 
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      scaffoldBackgroundColor: bgIvory,
+      scaffoldBackgroundColor: bgStone,
       colorScheme: const ColorScheme.light(
         primary: primaryPapaya,
         onPrimary: Colors.white,
-        secondary: Color(0xFFD97706),
-        surface: cardPure,
-        surfaceContainerHighest: surfaceSand,
+        secondary: Color(0xFF1C1C1E),
+        surface: cardWhite,
+        onSurface: Color(0xFF000000),
+        surfaceContainerHighest: secondaryFill,
         error: statusRed,
       ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.transparent,
-        foregroundColor: Color(0xFF18181B),
+        backgroundColor: bgStone,
+        foregroundColor: Color(0xFF000000),
         elevation: 0,
+        scrolledUnderElevation: 0,
         centerTitle: false,
       ),
       cardTheme: CardThemeData(
-        color: cardPure,
+        color: cardWhite,
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: const BorderSide(color: Color(0xFFE5E0D8), width: 1.2),
+          borderRadius: BorderRadius.circular(20),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: primaryPapaya,
+          backgroundColor: const Color(0xFF1C1C1E),
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         ),
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: primaryPapaya,
+        backgroundColor: Color(0xFF1C1C1E),
         foregroundColor: Colors.white,
-        elevation: 6,
+        elevation: 4,
         shape: StadiumBorder(),
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: Colors.white,
-        indicatorColor: primaryPapaya.withValues(alpha: 0.15),
+        indicatorColor: secondaryFill,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return const TextStyle(
               fontSize: 11.5,
-              fontWeight: FontWeight.w800,
-              color: primaryPapaya,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF000000),
             );
           }
           return const TextStyle(
             fontSize: 11.5,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF71717A),
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF8E8E93),
           );
         }),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFFFAF8F5),
+        fillColor: secondaryFill,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Color(0xFFD6D1C7)),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Color(0xFFD6D1C7)),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: primaryPapaya, width: 2),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFF000000), width: 1.5),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
@@ -214,7 +217,7 @@ class CarakiTheme {
   }
 }
 
-/// Greek/EU Styled License Plate Widget with embossed metallic look
+/// Clean Greek License Plate Widget
 class GreekLicensePlateBadge extends StatelessWidget {
   final String plate;
   final bool compact;
@@ -229,20 +232,8 @@ class GreekLicensePlateBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFFFFF), Color(0xFFEAEAEA)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-        borderRadius: BorderRadius.circular(7),
-        border: Border.all(color: const Color(0xFF18181B), width: 1.6),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.22),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: const Color(0xFFF4F4F6),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -250,48 +241,37 @@ class GreekLicensePlateBadge extends StatelessWidget {
           Container(
             padding: EdgeInsets.symmetric(
               horizontal: compact ? 5 : 6,
-              vertical: compact ? 2.5 : 4,
+              vertical: compact ? 3 : 4,
             ),
             decoration: const BoxDecoration(
               color: Color(0xFF003399),
               borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(5),
-                bottomLeft: Radius.circular(5),
+                topLeft: Radius.circular(6),
+                bottomLeft: Radius.circular(6),
               ),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.stars_rounded,
-                  color: const Color(0xFFFFCC00),
-                  size: compact ? 8 : 10,
-                ),
-                Text(
-                  'GR',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: compact ? 7 : 8.5,
-                    fontWeight: FontWeight.w900,
-                    height: 1.0,
-                  ),
-                ),
-              ],
+            child: Text(
+              'GR',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: compact ? 8 : 9,
+                fontWeight: FontWeight.w900,
+                height: 1.1,
+              ),
             ),
           ),
           Padding(
             padding: EdgeInsets.symmetric(
-              horizontal: compact ? 8 : 11,
+              horizontal: compact ? 8 : 10,
               vertical: compact ? 2 : 3,
             ),
             child: Text(
               plate.toUpperCase(),
               style: TextStyle(
                 color: const Color(0xFF111113),
-                fontSize: compact ? 12.5 : 15,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.4,
-                fontFamily: 'monospace',
+                fontSize: compact ? 12 : 14,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.0,
               ),
             ),
           ),
