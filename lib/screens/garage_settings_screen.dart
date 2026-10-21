@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../data/caraki_repository.dart';
 import '../models/caraki_models.dart';
 import '../theme/caraki_theme.dart';
+import '../widgets/caraki_animated_widgets.dart';
 import '../widgets/caraki_modals.dart';
 
 class GarageSettingsScreen extends StatelessWidget {
@@ -13,180 +14,157 @@ class GarageSettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final secondaryText = onSurface.withValues(alpha: 0.65);
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 110),
       children: [
-        // 1. Garage Header & Add Vehicle Button
+        // 1. Garage Vehicles Section
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Τα Οχήματά μου (Γκαράζ)',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  'Ενεργά οχήματα: ${state.vehicles.length}',
-                  style: const TextStyle(fontSize: 12.5, color: Colors.grey),
-                ),
-              ],
+            const Text(
+              'Οχήματα',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.3),
             ),
-            FilledButton.icon(
-              onPressed: () => CarakiModals.showAddOrEditVehicleSheet(context, state),
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('Προσθήκη Οχήματος'),
+            GestureDetector(
+              onTap: () => CarakiModals.showAddOrEditVehicleSheet(context, state),
+              child: Text(
+                'Προσθήκη',
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                  color: secondaryText,
+                ),
+              ),
             ),
           ],
         ),
         const SizedBox(height: 12),
 
         ...state.vehicles.map((v) => _buildVehicleGarageCard(context, v, now)),
-        const SizedBox(height: 22),
+        const SizedBox(height: 24),
 
-        // 2. Appearance / Theme Mode Selector
+        // 2. Appearance Section
         const Text(
-          'Εμφάνιση & Θέμα (Automotive UI)',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          'Εμφάνιση',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.3),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         Card(
           child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            padding: const EdgeInsets.all(14),
+            child: Row(
               children: [
-                const Text(
-                  'Επιλογή Θέματος Εφαρμογής',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                _ThemePill(
+                  label: 'Σκούρο',
+                  isSelected: state.themeMode == ThemeMode.dark,
+                  onTap: () => state.setThemeMode(ThemeMode.dark),
                 ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: SegmentedButton<ThemeMode>(
-                    segments: const [
-                      ButtonSegment(
-                        value: ThemeMode.dark,
-                        icon: Icon(Icons.dark_mode_rounded),
-                        label: Text('Σκούρο (Dark)'),
-                      ),
-                      ButtonSegment(
-                        value: ThemeMode.light,
-                        icon: Icon(Icons.light_mode_rounded),
-                        label: Text('Φωτεινό (Light)'),
-                      ),
-                      ButtonSegment(
-                        value: ThemeMode.system,
-                        icon: Icon(Icons.brightness_auto_rounded),
-                        label: Text('Αυτόματο'),
-                      ),
-                    ],
-                    selected: {state.themeMode},
-                    onSelectionChanged: (s) => state.setThemeMode(s.first),
-                  ),
+                const SizedBox(width: 8),
+                _ThemePill(
+                  label: 'Φωτεινό',
+                  isSelected: state.themeMode == ThemeMode.light,
+                  onTap: () => state.setThemeMode(ThemeMode.light),
+                ),
+                const SizedBox(width: 8),
+                _ThemePill(
+                  label: 'Αυτόματο',
+                  isSelected: state.themeMode == ThemeMode.system,
+                  onTap: () => state.setThemeMode(ThemeMode.system),
                 ),
               ],
             ),
           ),
         ),
-        const SizedBox(height: 22),
+        const SizedBox(height: 24),
 
-        // 3. Data Management, Backup & Demo Controls
+        // 3. Data & Backup Section
         const Text(
-          'Δεδομένα, Backup & Demo',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          'Δεδομένα',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.3),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         Card(
           child: Column(
             children: [
               ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: Color(0x222563EB),
-                  child: Icon(Icons.upload_file_rounded, color: CarakiTheme.primaryElectricBlue),
-                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 2),
                 title: const Text(
-                  'Εξαγωγή Πλήρους Backup (JSON)',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5),
+                  'Αντιγραφή Backup (JSON)',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                 ),
-                subtitle: const Text(
-                  'Αντιγραφή όλων των οχημάτων, service και καυσίμων στο πρόχειρο',
-                  style: TextStyle(fontSize: 12),
+                subtitle: Text(
+                  'Εξαγωγή όλων των δεδομένων στο πρόχειρο',
+                  style: TextStyle(fontSize: 12.5, color: secondaryText),
                 ),
+                trailing: Icon(Icons.chevron_right_rounded, color: secondaryText),
                 onTap: () async {
                   final jsonStr = await state.exportBackup();
                   await Clipboard.setData(ClipboardData(text: jsonStr));
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Το πλήρες Backup (JSON) αντιγράφηκε στο πρόχειρο!'),
+                        content: Text('Το Backup αντιγράφηκε στο πρόχειρο.'),
                         behavior: SnackBarBehavior.floating,
                       ),
                     );
                   }
                 },
               ),
-              const Divider(height: 1),
+              const Divider(height: 1, indent: 18, endIndent: 18),
               ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: Color(0x2210B981),
-                  child: Icon(Icons.download_rounded, color: CarakiTheme.statusGreen),
-                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 2),
                 title: const Text(
-                  'Εισαγωγή Backup (JSON)',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5),
+                  'Εισαγωγή Backup',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                 ),
-                subtitle: const Text(
-                  'Επαναφορά δεδομένων από αποθηκευμένο JSON backup',
-                  style: TextStyle(fontSize: 12),
+                subtitle: Text(
+                  'Επαναφορά από αποθηκευμένο JSON',
+                  style: TextStyle(fontSize: 12.5, color: secondaryText),
                 ),
+                trailing: Icon(Icons.chevron_right_rounded, color: secondaryText),
                 onTap: () => _showImportBackupDialog(context),
               ),
-              const Divider(height: 1),
+              const Divider(height: 1, indent: 18, endIndent: 18),
               ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: Color(0x22F59E0B),
-                  child: Icon(Icons.restore_rounded, color: CarakiTheme.statusAmber),
-                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 2),
                 title: const Text(
-                  'Επαναφορά Προ-φορτωμένων Demo Οχημάτων',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5),
+                  'Επαναφορά Demo Οχημάτων',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                 ),
-                subtitle: const Text(
-                  'Φόρτωση ξανά του Toyota Yaris Hybrid & της Yamaha MT-07',
-                  style: TextStyle(fontSize: 12),
+                subtitle: Text(
+                  'Φόρτωση Toyota Yaris & Yamaha MT-07',
+                  style: TextStyle(fontSize: 12.5, color: secondaryText),
                 ),
+                trailing: Icon(Icons.chevron_right_rounded, color: secondaryText),
                 onTap: () async {
                   await state.resetDemoData();
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Τα Demo οχήματα και το ιστορικό τους επαναφέρθηκαν!'),
+                        content: Text('Τα Demo οχήματα επαναφέρθηκαν.'),
                         behavior: SnackBarBehavior.floating,
                       ),
                     );
                   }
                 },
               ),
-              const Divider(height: 1),
+              const Divider(height: 1, indent: 18, endIndent: 18),
               ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: Color(0x22EF4444),
-                  child: Icon(Icons.delete_forever_rounded, color: CarakiTheme.statusRed),
-                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 2),
                 title: const Text(
-                  'Διαγραφή Demo / Ξεκίνα από την αρχή',
+                  'Διαγραφή όλων των δεδομένων',
                   style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14.5,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
                     color: CarakiTheme.statusRed,
                   ),
                 ),
-                subtitle: const Text(
-                  'Εκκαθάριση όλων των στοιχείων για να βάλεις μόνο το δικό σου όχημα',
-                  style: TextStyle(fontSize: 12),
+                subtitle: Text(
+                  'Ξεκίνα από την αρχή με άδειο Γκαράζ',
+                  style: TextStyle(fontSize: 12.5, color: secondaryText),
                 ),
                 onTap: () => _confirmClearAllData(context),
               ),
@@ -199,125 +177,63 @@ class GarageSettingsScreen extends StatelessWidget {
 
   Widget _buildVehicleGarageCard(BuildContext context, Vehicle v, DateTime now) {
     final isSelected = state.selectedVehicle?.id == v.id;
-    final health = v.overallHealthScore(now);
-    final healthColor = CarakiTheme.healthColor(health / 100.0);
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final secondaryText = onSurface.withValues(alpha: 0.65);
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: BorderSide(
-          color: isSelected
-              ? CarakiTheme.primaryElectricBlue
-              : Colors.grey.withValues(alpha: 0.2),
-          width: isSelected ? 2 : 1,
-        ),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: BouncyTap(
         onTap: () => state.selectVehicle(v.id),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundColor: CarakiTheme.primaryElectricBlue.withValues(alpha: 0.15),
-                    child: Icon(v.type.icon, color: CarakiTheme.primaryElectricBlue, size: 24),
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(11),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? CarakiTheme.primaryPapaya
+                        : Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                v.fullName,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                              ),
-                            ),
-                            if (isSelected)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: CarakiTheme.primaryElectricBlue,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Text(
-                                  'ΕΝΕΡΓΟ',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            GreekLicensePlateBadge(plate: v.licensePlate, compact: true),
-                            const SizedBox(width: 10),
-                            Text(
-                              '~${CarakiTheme.formatKm(v.estimatedOdometerKm(now))}',
-                              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                  child: Icon(
+                    v.type.icon,
+                    color: isSelected ? Colors.white : onSurface,
+                    size: 22,
                   ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: healthColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      'Υγεία: $health%',
-                      style: TextStyle(
-                        color: healthColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        v.fullName,
+                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5),
                       ),
-                    ),
+                      const SizedBox(height: 3),
+                      Text(
+                        '${v.licensePlate} • ${CarakiTheme.formatKm(v.estimatedOdometerKm(now))}',
+                        style: TextStyle(fontSize: 13, color: secondaryText),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Λάδια: ${v.oilSpec} • Ελαστικά: ${v.tireDimension}',
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.edit_outlined, size: 20, color: secondaryText),
+                  onPressed: () => CarakiModals.showAddOrEditVehicleSheet(
+                    context,
+                    state,
+                    existing: v,
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.edit_rounded, size: 20),
-                    tooltip: 'Επεξεργασία οχήματος',
-                    onPressed: () => CarakiModals.showAddOrEditVehicleSheet(
-                      context,
-                      state,
-                      existing: v,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline_rounded, size: 20, color: CarakiTheme.statusRed),
-                    tooltip: 'Διαγραφή οχήματος',
-                    onPressed: () => state.deleteVehicle(v.id),
-                  ),
-                ],
-              ),
-            ],
+                ),
+                IconButton(
+                  icon: Icon(Icons.delete_outline_rounded, size: 20, color: secondaryText),
+                  onPressed: () => state.deleteVehicle(v.id),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -332,9 +248,9 @@ class GarageSettingsScreen extends StatelessWidget {
         title: const Text('Εισαγωγή Backup (JSON)'),
         content: TextField(
           controller: ctrl,
-          maxLines: 6,
+          maxLines: 5,
           decoration: const InputDecoration(
-            hintText: 'Επικόλλησε εδώ το JSON backup του Caraki...',
+            hintText: 'Επικόλλησε εδώ το JSON backup...',
           ),
         ),
         actions: [
@@ -346,16 +262,11 @@ class GarageSettingsScreen extends StatelessWidget {
             onPressed: () async {
               try {
                 await state.importBackup(ctrl.text.trim());
-                if (ctx.mounted) {
-                  Navigator.of(ctx).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Το Backup εισήχθη με επιτυχία!')),
-                  );
-                }
-              } catch (e) {
+                if (ctx.mounted) Navigator.of(ctx).pop();
+              } catch (_) {
                 if (ctx.mounted) {
                   ScaffoldMessenger.of(ctx).showSnackBar(
-                    const SnackBar(content: Text('Μη έγκυρη μορφή JSON Backup.')),
+                    const SnackBar(content: Text('Μη έγκυρη μορφή JSON.')),
                   );
                 }
               }
@@ -371,9 +282,9 @@ class GarageSettingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Διαγραφή Demo & Όλων των Δεδομένων;'),
+        title: const Text('Διαγραφή όλων των δεδομένων;'),
         content: const Text(
-          'Θέλεις να διαγραφούν τα προ-φορτωμένα Demo οχήματα και να ξεκινήσεις με καθαρό Γκαράζ;',
+          'Θα διαγραφούν όλα τα οχήματα και το ιστορικό ώστε να προσθέσεις το δικό σου όχημα από την αρχή.',
         ),
         actions: [
           TextButton(
@@ -384,19 +295,54 @@ class GarageSettingsScreen extends StatelessWidget {
             style: FilledButton.styleFrom(backgroundColor: CarakiTheme.statusRed),
             onPressed: () async {
               await state.clearAllData();
-              if (ctx.mounted) {
-                Navigator.of(ctx).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Όλα τα δεδομένα διαγράφηκαν. Πρόσθεσε το πρώτο σου όχημα!'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              }
+              if (ctx.mounted) Navigator.of(ctx).pop();
             },
-            child: const Text('Διαγραφή & Εκκίνηση'),
+            child: const Text('Διαγραφή'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ThemePill extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _ThemePill({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    return Expanded(
+      child: BouncyTap(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? onSurface
+                : Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: isSelected
+                    ? Theme.of(context).scaffoldBackgroundColor
+                    : onSurface.withValues(alpha: 0.75),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

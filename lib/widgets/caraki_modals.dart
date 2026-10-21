@@ -3,9 +3,70 @@ import 'package:flutter/services.dart';
 import '../data/caraki_repository.dart';
 import '../models/caraki_models.dart';
 import '../theme/caraki_theme.dart';
+import 'caraki_animated_widgets.dart';
 
 class CarakiModals {
-  /// 1. Quick Odometer Update & Monthly Check-up Dialog
+  static Widget _buildSheetHeader(
+    BuildContext context, {
+    required String title,
+    required VoidCallback onSave,
+    String saveLabel = 'Αποθήκευση',
+  }) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 16, 12),
+      child: Column(
+        children: [
+          Container(
+            width: 38,
+            height: 4.5,
+            decoration: BoxDecoration(
+              color: onSurface.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Text(
+                  'Ακύρωση',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: onSurface.withValues(alpha: 0.65),
+                  ),
+                ),
+              ),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              GestureDetector(
+                onTap: onSave,
+                child: Text(
+                  saveLabel,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: CarakiTheme.primaryPapaya,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 1. Clean Odometer Update Sheet
   static Future<void> showOdometerUpdateDialog(
     BuildContext context,
     CarakiState state,
@@ -19,124 +80,86 @@ class CarakiModals {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
+        Future<void> save() async {
+          final newKm = int.tryParse(odoCtrl.text.trim()) ?? vehicle.currentOdometerKm;
+          final newAvg = int.tryParse(avgCtrl.text.trim()) ?? vehicle.averageMonthlyKm;
+          await state.updateOdometer(
+            vehicle.id,
+            newKm,
+            newMonthlyAvgKm: newAvg.clamp(50, 20000),
+          );
+          if (ctx.mounted) Navigator.of(ctx).pop();
+        }
+
+        final secondary = Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.6);
+
         return Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-          ),
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: CarakiTheme.primaryElectricBlue.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.speed_rounded, color: CarakiTheme.primaryElectricBlue),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Ενημέρωση Χιλιομέτρων Κοντέρ',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          '${vehicle.fullName} • ${vehicle.licensePlate}',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.65),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: CarakiTheme.accentCyan.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: CarakiTheme.accentCyan.withValues(alpha: 0.3)),
-                ),
-                child: Row(
+              _buildSheetHeader(ctx, title: 'Χιλιόμετρα Κοντέρ', onSave: save),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.auto_awesome_rounded, color: CarakiTheme.accentCyan, size: 20),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Τελευταία καταγραφή: ${CarakiTheme.formatKm(vehicle.currentOdometerKm)} (${CarakiTheme.formatDate(vehicle.lastOdometerUpdate)}).\nΈξυπνη εκτίμηση σήμερα: ~${CarakiTheme.formatKm(estimated)}',
-                        style: const TextStyle(fontSize: 12.5, height: 1.35),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Τρέχουσα ένδειξη (χλμ)',
+                              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: secondary),
+                            ),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: odoCtrl,
+                              autofocus: true,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+                              decoration: const InputDecoration(
+                                suffixText: 'χλμ',
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Μέσος όρος ανά μήνα (για αυτόματη εκτίμηση)',
+                              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: secondary),
+                            ),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: avgCtrl,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                              decoration: const InputDecoration(
+                                suffixText: 'χλμ / μήνα',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: save,
+                        child: const Text(
+                          'Ενημέρωση Κοντέρ',
+                          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                        ),
                       ),
                     ),
                   ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: odoCtrl,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: const InputDecoration(
-                  labelText: 'Σημερινά Χιλιόμετρα Κοντέρ (χλμ)',
-                  prefixIcon: Icon(Icons.add_road_rounded),
-                  suffixText: 'χλμ',
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: avgCtrl,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: const InputDecoration(
-                  labelText: 'Μέσος όρος χιλιομέτρων ανά μήνα (για εκτίμηση)',
-                  prefixIcon: Icon(Icons.trending_up_rounded),
-                  suffixText: 'χλμ / μήνα',
-                ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: FilledButton.icon(
-                  onPressed: () async {
-                    final newKm = int.tryParse(odoCtrl.text.trim()) ?? vehicle.currentOdometerKm;
-                    final newAvg = int.tryParse(avgCtrl.text.trim()) ?? vehicle.averageMonthlyKm;
-                    await state.updateOdometer(
-                      vehicle.id,
-                      newKm,
-                      newMonthlyAvgKm: newAvg.clamp(50, 20000),
-                    );
-                    if (ctx.mounted) {
-                      Navigator.of(ctx).pop();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Το κοντέρ ενημερώθηκε στα ${CarakiTheme.formatKm(newKm)}!'),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    }
-                  },
-                  icon: const Icon(Icons.check_circle_rounded),
-                  label: const Text(
-                    'Αποθήκευση & Επανυπολογισμός Service',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                  ),
                 ),
               ),
             ],
@@ -146,7 +169,7 @@ class CarakiModals {
     );
   }
 
-  /// 2. Unified Service Event Dialog with Multi-Part Checklist
+  /// 2. Redesigned Clean Service Event Page with Quick Presets & Interactive Pill Chips
   static Future<void> showAddServiceEventSheet(
     BuildContext context,
     CarakiState state,
@@ -156,338 +179,344 @@ class CarakiModals {
     final now = DateTime.now();
     DateTime selectedDate = now;
     final selectedParts = <PartType>{...(preselectedParts ?? {PartType.engineOil})};
+    bool showExtraDetails = false;
 
     final titleCtrl = TextEditingController(
       text: preselectedParts != null && preselectedParts.length == 1
-          ? 'Συντήρηση: ${preselectedParts.first.title}'
-          : 'Τακτικό Service & Έλεγχος',
+          ? preselectedParts.first.title
+          : 'Τακτικό Service',
     );
     final odoCtrl = TextEditingController(
       text: vehicle.estimatedOdometerKm(now).toString(),
     );
-    final costCtrl = TextEditingController(text: '120');
+    final costCtrl = TextEditingController(text: '');
     final workshopCtrl = TextEditingController(text: '');
-    final phoneCtrl = TextEditingController(text: '');
-    final receiptCtrl = TextEditingController(text: '');
     final notesCtrl = TextEditingController(text: '');
 
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
+            final onSurface = Theme.of(ctx).colorScheme.onSurface;
+            final secondary = onSurface.withValues(alpha: 0.6);
+
+            Future<void> save() async {
+              if (selectedParts.isEmpty) {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  const SnackBar(content: Text('Επίλεξε τουλάχιστον 1 εργασία.')),
+                );
+                return;
+              }
+              final odo = int.tryParse(odoCtrl.text.trim()) ?? vehicle.currentOdometerKm;
+              final cost = double.tryParse(costCtrl.text.replaceAll(',', '.').trim()) ?? 0.0;
+              final event = ServiceEvent(
+                id: 'srv-${DateTime.now().millisecondsSinceEpoch}',
+                vehicleId: vehicle.id,
+                date: selectedDate,
+                odometerKm: odo,
+                title: titleCtrl.text.trim().isEmpty
+                    ? 'Service (${selectedParts.length} εργασίες)'
+                    : titleCtrl.text.trim(),
+                servicedParts: selectedParts.toList(),
+                totalCost: cost,
+                workshopName: workshopCtrl.text.trim(),
+                notes: notesCtrl.text.trim(),
+              );
+              await state.addServiceEvent(event);
+              if (ctx.mounted) Navigator.of(ctx).pop();
+            }
+
             return DraggableScrollableSheet(
               expand: false,
-              initialChildSize: 0.9,
+              initialChildSize: 0.88,
               minChildSize: 0.6,
               maxChildSize: 0.96,
               builder: (_, scrollController) {
-                return ListView(
-                  controller: scrollController,
-                  padding: EdgeInsets.only(
-                    left: 20,
-                    right: 20,
-                    top: 16,
-                    bottom: MediaQuery.of(ctx).viewInsets.bottom + 28,
-                  ),
+                return Column(
                   children: [
-                    Center(
-                      child: Container(
-                        width: 44,
-                        height: 5,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.withValues(alpha: 0.4),
-                          borderRadius: BorderRadius.circular(10),
+                    _buildSheetHeader(ctx, title: 'Νέο Service', onSave: save),
+                    Expanded(
+                      child: ListView(
+                        controller: scrollController,
+                        padding: EdgeInsets.fromLTRB(
+                          20,
+                          4,
+                          20,
+                          MediaQuery.of(ctx).viewInsets.bottom + 32,
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: CarakiTheme.statusGreen.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(Icons.build_circle_rounded, color: CarakiTheme.statusGreen, size: 26),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Καταχώρηση Εργασίας / Service',
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                              ),
-                              Text(
-                                'Τσέκαρε όσα αλλάχτηκαν για να μηδενίσουν οι μπάρες υγείας τους!',
-                                style: TextStyle(
-                                  fontSize: 12.5,
-                                  color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.65),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 18),
-                    TextField(
-                      controller: titleCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Τίτλος Service (π.χ. Γενικό Service, Αλλαγή Ελαστικών)',
-                        prefixIcon: Icon(Icons.title_rounded),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: odoCtrl,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                            decoration: const InputDecoration(
-                              labelText: 'Χιλιόμετρα (Κοντέρ)',
-                              prefixIcon: Icon(Icons.speed_rounded),
-                              suffixText: 'χλμ',
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            controller: costCtrl,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            decoration: const InputDecoration(
-                              labelText: 'Συνολικό Κόστος',
-                              prefixIcon: Icon(Icons.euro_rounded),
-                              suffixText: '€',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    InkWell(
-                      borderRadius: BorderRadius.circular(14),
-                      onTap: () async {
-                        final picked = await showDatePicker(
-                          context: ctx,
-                          initialDate: selectedDate,
-                          firstDate: DateTime(2000),
-                          lastDate: DateTime.now().add(const Duration(days: 1)),
-                        );
-                        if (picked != null) {
-                          setModalState(() => selectedDate = picked);
-                        }
-                      },
-                      child: InputDecorator(
-                        decoration: const InputDecoration(
-                          labelText: 'Ημερομηνία Πραγματοποίησης',
-                          prefixIcon: Icon(Icons.calendar_today_rounded),
-                        ),
-                        child: Text(
-                          CarakiTheme.formatDate(selectedDate),
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Checklist Εργασιών & Ανταλλακτικών',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          'Επιλεγμένα: ${selectedParts.length}',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: CarakiTheme.primaryElectricBlue,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    ...PartType.values.map((pt) {
-                      final isChecked = selectedParts.contains(pt);
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(12),
-                          onTap: () {
-                            setModalState(() {
-                              if (isChecked) {
-                                selectedParts.remove(pt);
-                              } else {
-                                selectedParts.add(pt);
-                              }
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: isChecked
-                                  ? CarakiTheme.primaryElectricBlue.withValues(alpha: 0.14)
-                                  : Theme.of(ctx).colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: isChecked
-                                    ? CarakiTheme.primaryElectricBlue
-                                    : Colors.transparent,
-                                width: 1.4,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  pt.icon,
-                                  size: 22,
-                                  color: isChecked
-                                      ? CarakiTheme.primaryElectricBlue
-                                      : Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.65),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Section 1: Core Fields in a single clean iOS card
+                          Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  TextField(
+                                    controller: titleCtrl,
+                                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                                    decoration: const InputDecoration(
+                                      labelText: 'Τίτλος εργασίας',
+                                      hintText: 'π.χ. Λάδια & Φίλτρα',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Row(
                                     children: [
-                                      Text(
-                                        pt.title,
-                                        style: TextStyle(
-                                          fontWeight: isChecked ? FontWeight.bold : FontWeight.w600,
-                                          fontSize: 13.5,
+                                      Expanded(
+                                        child: TextField(
+                                          controller: odoCtrl,
+                                          keyboardType: TextInputType.number,
+                                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                          style: const TextStyle(fontWeight: FontWeight.w700),
+                                          decoration: const InputDecoration(
+                                            labelText: 'Χιλιόμετρα',
+                                            suffixText: 'χλμ',
+                                          ),
                                         ),
                                       ),
-                                      Text(
-                                        pt.subtitle,
-                                        style: TextStyle(
-                                          fontSize: 11.5,
-                                          color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.6),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: TextField(
+                                          controller: costCtrl,
+                                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                          style: const TextStyle(fontWeight: FontWeight.w700),
+                                          decoration: const InputDecoration(
+                                            labelText: 'Κόστος',
+                                            hintText: '0',
+                                            suffixText: '€',
+                                          ),
                                         ),
                                       ),
                                     ],
                                   ),
-                                ),
-                                Checkbox(
-                                  value: isChecked,
-                                  onChanged: (val) {
-                                    setModalState(() {
-                                      if (val == true) {
-                                        selectedParts.add(pt);
-                                      } else {
-                                        selectedParts.remove(pt);
+                                  const SizedBox(height: 12),
+                                  InkWell(
+                                    borderRadius: BorderRadius.circular(14),
+                                    onTap: () async {
+                                      final picked = await showDatePicker(
+                                        context: ctx,
+                                        initialDate: selectedDate,
+                                        firstDate: DateTime(2000),
+                                        lastDate: DateTime.now().add(const Duration(days: 1)),
+                                      );
+                                      if (picked != null) {
+                                        setModalState(() => selectedDate = picked);
                                       }
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(ctx).colorScheme.surfaceContainerHighest,
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            'Ημερομηνία',
+                                            style: TextStyle(color: secondary, fontWeight: FontWeight.w500),
+                                          ),
+                                          Text(
+                                            CarakiTheme.formatDate(selectedDate),
+                                            style: const TextStyle(fontWeight: FontWeight.w700),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 22),
+
+                          // Section 2: Quick Presets + Clean Selectable Part Pills
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Τι αλλάχτηκε;',
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                              ),
+                              Text(
+                                '${selectedParts.length} επιλεγμένα',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: secondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+
+                          // Quick Presets Row
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: [
+                                _PresetPill(
+                                  label: 'Μικρό Service (Λάδια/Φίλτρα)',
+                                  onTap: () {
+                                    setModalState(() {
+                                      selectedParts
+                                        ..clear()
+                                        ..addAll([
+                                          PartType.engineOil,
+                                          PartType.airCabinFilter,
+                                        ]);
+                                      titleCtrl.text = 'Μικρό Service (Λάδια & Φίλτρα)';
+                                    });
+                                  },
+                                ),
+                                const SizedBox(width: 8),
+                                _PresetPill(
+                                  label: 'Μεγάλο Service',
+                                  onTap: () {
+                                    setModalState(() {
+                                      selectedParts
+                                        ..clear()
+                                        ..addAll([
+                                          PartType.engineOil,
+                                          PartType.airCabinFilter,
+                                          PartType.sparkPlugs,
+                                          PartType.brakeFluid,
+                                        ]);
+                                      titleCtrl.text = 'Μεγάλο Service';
+                                    });
+                                  },
+                                ),
+                                const SizedBox(width: 8),
+                                _PresetPill(
+                                  label: 'Ελαστικά',
+                                  onTap: () {
+                                    setModalState(() {
+                                      selectedParts
+                                        ..clear()
+                                        ..addAll([
+                                          PartType.tiresChange,
+                                          PartType.tiresRotation,
+                                        ]);
+                                      titleCtrl.text = 'Αλλαγή Ελαστικών';
                                     });
                                   },
                                 ),
                               ],
                             ),
                           ),
-                        ),
-                      );
-                    }),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: workshopCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Συνεργείο / Τεχνικός',
-                              prefixIcon: Icon(Icons.storefront_rounded),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            controller: phoneCtrl,
-                            keyboardType: TextInputType.phone,
-                            decoration: const InputDecoration(
-                              labelText: 'Τηλέφωνο Συνεργείου',
-                              prefixIcon: Icon(Icons.phone_rounded),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: receiptCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Αριθμός Απόδειξης / Τιμολογίου (Προαιρετικό)',
-                        prefixIcon: Icon(Icons.receipt_rounded),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: notesCtrl,
-                      maxLines: 2,
-                      decoration: const InputDecoration(
-                        labelText: 'Σημειώσεις (μάρκα ανταλλακτικών, εγγύηση, παρατηρήσεις)',
-                        prefixIcon: Icon(Icons.notes_rounded),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      height: 52,
-                      child: FilledButton.icon(
-                        onPressed: () async {
-                          if (selectedParts.isEmpty) {
-                            ScaffoldMessenger.of(ctx).showSnackBar(
-                              const SnackBar(
-                                content: Text('Επίλεξε τουλάχιστον 1 εργασία/εξάρτημα από τη λίστα!'),
+                          const SizedBox(height: 14),
+
+                          // Clean 2-column grid of compact part tiles (no bulky subtitles or checkboxes)
+                          Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: PartType.values.map((pt) {
+                                  final isSelected = selectedParts.contains(pt);
+                                  return BouncyTap(
+                                    onTap: () {
+                                      setModalState(() {
+                                        if (isSelected) {
+                                          selectedParts.remove(pt);
+                                        } else {
+                                          selectedParts.add(pt);
+                                        }
+                                      });
+                                    },
+                                    child: AnimatedContainer(
+                                      duration: const Duration(milliseconds: 180),
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? CarakiTheme.primaryPapaya
+                                            : Theme.of(ctx).colorScheme.surfaceContainerHighest,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            isSelected ? Icons.check_rounded : pt.icon,
+                                            size: 16,
+                                            color: isSelected ? Colors.white : secondary,
+                                          ),
+                                          const SizedBox(width: 7),
+                                          Text(
+                                            pt.title,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w700,
+                                              color: isSelected ? Colors.white : onSurface,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
                               ),
-                            );
-                            return;
-                          }
-                          final odo = int.tryParse(odoCtrl.text.trim()) ?? vehicle.currentOdometerKm;
-                          final cost = double.tryParse(costCtrl.text.replaceAll(',', '.').trim()) ?? 0.0;
-                          final event = ServiceEvent(
-                            id: 'srv-${DateTime.now().millisecondsSinceEpoch}',
-                            vehicleId: vehicle.id,
-                            date: selectedDate,
-                            odometerKm: odo,
-                            title: titleCtrl.text.trim().isEmpty
-                                ? 'Service (${selectedParts.length} εργασίες)'
-                                : titleCtrl.text.trim(),
-                            servicedParts: selectedParts.toList(),
-                            totalCost: cost,
-                            workshopName: workshopCtrl.text.trim(),
-                            workshopPhone: phoneCtrl.text.trim(),
-                            notes: notesCtrl.text.trim(),
-                            receiptCodeOrRef: receiptCtrl.text.trim().isEmpty ? null : receiptCtrl.text.trim(),
-                          );
-                          await state.addServiceEvent(event);
-                          if (ctx.mounted) {
-                            Navigator.of(ctx).pop();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Το Service αποθηκεύτηκε & ενημερώθηκαν ${selectedParts.length} εξαρτήματα!',
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Section 3: Collapsible Optional Workshop & Notes
+                          if (!showExtraDetails)
+                            Center(
+                              child: TextButton.icon(
+                                onPressed: () => setModalState(() => showExtraDetails = true),
+                                icon: const Icon(Icons.add_rounded, size: 18),
+                                label: const Text('Προσθήκη συνεργείου ή σημείωσης (προαιρετικό)'),
+                              ),
+                            )
+                          else
+                            Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  children: [
+                                    TextField(
+                                      controller: workshopCtrl,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Συνεργείο',
+                                        hintText: 'π.χ. AutoService Παπαδόπουλος',
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    TextField(
+                                      controller: notesCtrl,
+                                      maxLines: 2,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Σημειώσεις',
+                                        hintText: 'Μάρκα ανταλλακτικών, παρατηρήσεις...',
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                behavior: SnackBarBehavior.floating,
                               ),
-                            );
-                          }
-                        },
-                        icon: const Icon(Icons.save_rounded),
-                        label: const Text(
-                          'Καταχώρηση Service & Ανανέωση Εξαρτημάτων',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                        ),
+                            ),
+
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            height: 52,
+                            child: FilledButton(
+                              onPressed: save,
+                              child: const Text(
+                                'Αποθήκευση Service',
+                                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -500,7 +529,7 @@ class CarakiModals {
     );
   }
 
-  /// 3. Edit Component Interval & Last Service Config Dialog
+  /// 3. Clean Component Details & Interval Sheet
   static Future<void> showEditPartConfigSheet(
     BuildContext context,
     CarakiState state,
@@ -516,160 +545,172 @@ class CarakiModals {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
+            Future<void> save() async {
+              final updated = config.copyWith(
+                intervalKm: int.tryParse(kmIntervalCtrl.text.trim()) ?? config.intervalKm,
+                intervalMonths: int.tryParse(monthsIntervalCtrl.text.trim()) ?? config.intervalMonths,
+                lastServiceKm: int.tryParse(lastKmCtrl.text.trim()) ?? config.lastServiceKm,
+                lastServiceDate: lastDate,
+                notes: notesCtrl.text.trim(),
+              );
+              await state.updatePartConfig(vehicle.id, updated);
+              if (ctx.mounted) Navigator.of(ctx).pop();
+            }
+
             return Padding(
-              padding: EdgeInsets.only(
-                left: 20,
-                right: 20,
-                top: 20,
-                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-              ),
+              padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 24),
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Icon(config.partType.icon, color: CarakiTheme.primaryElectricBlue, size: 28),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                config.partType.title,
-                                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                    _buildSheetHeader(ctx, title: config.partType.title, onSave: save),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        children: [
+                          Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Τελευταία Αλλαγή',
+                                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: TextField(
+                                          controller: lastKmCtrl,
+                                          keyboardType: TextInputType.number,
+                                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                          decoration: const InputDecoration(
+                                            labelText: 'Χιλιόμετρα',
+                                            suffixText: 'χλμ',
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: InkWell(
+                                          borderRadius: BorderRadius.circular(14),
+                                          onTap: () async {
+                                            final picked = await showDatePicker(
+                                              context: ctx,
+                                              initialDate: lastDate,
+                                              firstDate: DateTime(2000),
+                                              lastDate: DateTime.now(),
+                                            );
+                                            if (picked != null) {
+                                              setModalState(() => lastDate = picked);
+                                            }
+                                          },
+                                          child: InputDecorator(
+                                            decoration: const InputDecoration(
+                                              labelText: 'Ημερομηνία',
+                                            ),
+                                            child: Text(
+                                              CarakiTheme.formatDate(lastDate),
+                                              style: const TextStyle(fontWeight: FontWeight.w700),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const Text(
+                                    'Διάστημα Επόμενης Αλλαγής',
+                                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: TextField(
+                                          controller: kmIntervalCtrl,
+                                          keyboardType: TextInputType.number,
+                                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                          decoration: const InputDecoration(
+                                            labelText: 'Κάθε (Χλμ)',
+                                            suffixText: 'χλμ',
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: TextField(
+                                          controller: monthsIntervalCtrl,
+                                          keyboardType: TextInputType.number,
+                                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                          decoration: const InputDecoration(
+                                            labelText: 'Κάθε (Μήνες)',
+                                            suffixText: 'μήνες',
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  TextField(
+                                    controller: notesCtrl,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Σημείωση (π.χ. τύπος ανταλλακτικού)',
+                                    ),
+                                  ),
+                                ],
                               ),
-                              Text(
-                                'Ρύθμιση ορίων αλλαγής & τελευταίου ελέγχου',
-                                style: TextStyle(
-                                  fontSize: 12.5,
-                                  color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.65),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    Navigator.of(ctx).pop();
+                                    showAddServiceEventSheet(
+                                      context,
+                                      state,
+                                      vehicle,
+                                      preselectedParts: {config.partType},
+                                    );
+                                  },
+                                  child: const Text(
+                                    'Έγινε Αλλαγή Τώρα',
+                                    style: TextStyle(fontWeight: FontWeight.w700),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: FilledButton(
+                                  onPressed: save,
+                                  child: const Text(
+                                    'Αποθήκευση',
+                                    style: TextStyle(fontWeight: FontWeight.w700),
+                                  ),
                                 ),
                               ),
                             ],
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 18),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: kmIntervalCtrl,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                            decoration: const InputDecoration(
-                              labelText: 'Όριο Αλλαγής (Χλμ)',
-                              suffixText: 'χλμ',
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            controller: monthsIntervalCtrl,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                            decoration: const InputDecoration(
-                              labelText: 'Όριο Αλλαγής (Μήνες)',
-                              suffixText: 'μήνες',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: lastKmCtrl,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                            decoration: const InputDecoration(
-                              labelText: 'Χλμ Τελευταίας Αλλαγής',
-                              suffixText: 'χλμ',
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(14),
-                            onTap: () async {
-                              final picked = await showDatePicker(
-                                context: ctx,
-                                initialDate: lastDate,
-                                firstDate: DateTime(2000),
-                                lastDate: DateTime.now(),
-                              );
-                              if (picked != null) {
-                                setModalState(() => lastDate = picked);
-                              }
-                            },
-                            child: InputDecorator(
-                              decoration: const InputDecoration(
-                                labelText: 'Ημ/νία Τελευταίας Αλλαγής',
-                              ),
-                              child: Text(CarakiTheme.formatDate(lastDate)),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: notesCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Σημείωση / Τύπος ανταλλακτικού (π.χ. Michelin, Castrol 5W-30)',
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 18),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () {
-                              Navigator.of(ctx).pop();
-                              showAddServiceEventSheet(
-                                context,
-                                state,
-                                vehicle,
-                                preselectedParts: {config.partType},
-                              );
-                            },
-                            icon: const Icon(Icons.autorenew_rounded),
-                            label: const Text('Έγινε Αλλαγή Τώρα'),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: FilledButton.icon(
-                            onPressed: () async {
-                              final updated = config.copyWith(
-                                intervalKm: int.tryParse(kmIntervalCtrl.text.trim()) ?? config.intervalKm,
-                                intervalMonths: int.tryParse(monthsIntervalCtrl.text.trim()) ?? config.intervalMonths,
-                                lastServiceKm: int.tryParse(lastKmCtrl.text.trim()) ?? config.lastServiceKm,
-                                lastServiceDate: lastDate,
-                                notes: notesCtrl.text.trim(),
-                              );
-                              await state.updatePartConfig(vehicle.id, updated);
-                              if (ctx.mounted) Navigator.of(ctx).pop();
-                            },
-                            icon: const Icon(Icons.save_rounded),
-                            label: const Text('Αποθήκευση'),
-                          ),
-                        ),
-                      ],
                     ),
                   ],
                 ),
@@ -681,7 +722,7 @@ class CarakiModals {
     );
   }
 
-  /// 4. Add/Edit Legal Reminder (KTEO, Insurance, KEK, Road Tax, Custom)
+  /// 4. Clean Legal Reminder Sheet (KTEO, Insurance, KEK, Road Tax)
   static Future<void> showReminderSheet(
     BuildContext context,
     CarakiState state,
@@ -694,193 +735,183 @@ class CarakiModals {
       text: existing?.customTitle ?? selectedType.title,
     );
     final costCtrl = TextEditingController(
-      text: existing != null ? existing.cost.toStringAsFixed(2) : '55.00',
+      text: existing != null && existing.cost > 0 ? existing.cost.toStringAsFixed(0) : '',
     );
     final providerCtrl = TextEditingController(text: existing?.providerOrCenter ?? '');
-    final policyCtrl = TextEditingController(text: existing?.policyOrRefNumber ?? '');
     final phoneCtrl = TextEditingController(text: existing?.emergencyPhone ?? '');
-    final notesCtrl = TextEditingController(text: existing?.notes ?? '');
 
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
+            Future<void> save() async {
+              final cost = double.tryParse(costCtrl.text.replaceAll(',', '.').trim()) ?? 0.0;
+              final reminder = LegalReminder(
+                id: existing?.id ?? 'rem-${DateTime.now().millisecondsSinceEpoch}',
+                vehicleId: vehicle.id,
+                type: selectedType,
+                customTitle: titleCtrl.text.trim().isEmpty
+                    ? selectedType.title
+                    : titleCtrl.text.trim(),
+                issueDate: existing?.issueDate ?? DateTime.now(),
+                dueDate: dueDate,
+                cost: cost,
+                providerOrCenter: providerCtrl.text.trim(),
+                emergencyPhone: phoneCtrl.text.trim(),
+              );
+              await state.addOrUpdateReminder(reminder);
+              if (ctx.mounted) Navigator.of(ctx).pop();
+            }
+
+            final onSurface = Theme.of(ctx).colorScheme.onSurface;
+
             return Padding(
-              padding: EdgeInsets.only(
-                left: 20,
-                right: 20,
-                top: 20,
-                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-              ),
+              padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 24),
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      existing == null
-                          ? 'Νέα Υπενθύμιση / Υποχρέωση'
-                          : 'Επεξεργασία: ${existing.customTitle}',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    _buildSheetHeader(
+                      ctx,
+                      title: existing == null ? 'Νέα Υπενθύμιση' : 'Επεξεργασία',
+                      onSave: save,
                     ),
-                    const SizedBox(height: 14),
-                    DropdownButtonFormField<LegalObligationType>(
-                      initialValue: selectedType,
-                      decoration: const InputDecoration(
-                        labelText: 'Κατηγορία Υποχρέωσης',
-                        prefixIcon: Icon(Icons.category_rounded),
-                      ),
-                      items: LegalObligationType.values.map((t) {
-                        return DropdownMenuItem(
-                          value: t,
-                          child: Row(
-                            children: [
-                              Icon(t.icon, size: 18),
-                              const SizedBox(width: 8),
-                              Text(t.title),
-                            ],
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Clean Category Pills
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: LegalObligationType.values.map((t) {
+                                final isSelected = t == selectedType;
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: BouncyTap(
+                                    onTap: () {
+                                      setModalState(() {
+                                        selectedType = t;
+                                        if (existing == null) titleCtrl.text = t.title;
+                                      });
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? CarakiTheme.primaryPapaya
+                                            : Theme.of(ctx).colorScheme.surface,
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      child: Text(
+                                        t.title,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: isSelected ? Colors.white : onSurface,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
                           ),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) {
-                          setModalState(() {
-                            selectedType = val;
-                            if (existing == null) {
-                              titleCtrl.text = val.title;
-                            }
-                          });
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: titleCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Τίτλος Υπενθύμισης',
-                        prefixIcon: Icon(Icons.label_rounded),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(14),
-                            onTap: () async {
-                              final picked = await showDatePicker(
-                                context: ctx,
-                                initialDate: dueDate,
-                                firstDate: DateTime(2020),
-                                lastDate: DateTime(2035),
-                              );
-                              if (picked != null) {
-                                setModalState(() => dueDate = picked);
-                              }
-                            },
-                            child: InputDecorator(
-                              decoration: const InputDecoration(
-                                labelText: 'Ημερομηνία Λήξης',
-                                prefixIcon: Icon(Icons.event_rounded),
+                          const SizedBox(height: 14),
+                          Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                children: [
+                                  TextField(
+                                    controller: titleCtrl,
+                                    style: const TextStyle(fontWeight: FontWeight.w700),
+                                    decoration: const InputDecoration(
+                                      labelText: 'Τίτλος',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: InkWell(
+                                          borderRadius: BorderRadius.circular(14),
+                                          onTap: () async {
+                                            final picked = await showDatePicker(
+                                              context: ctx,
+                                              initialDate: dueDate,
+                                              firstDate: DateTime(2020),
+                                              lastDate: DateTime(2035),
+                                            );
+                                            if (picked != null) {
+                                              setModalState(() => dueDate = picked);
+                                            }
+                                          },
+                                          child: InputDecorator(
+                                            decoration: const InputDecoration(
+                                              labelText: 'Ημερομηνία Λήξης',
+                                            ),
+                                            child: Text(
+                                              CarakiTheme.formatDate(dueDate),
+                                              style: const TextStyle(fontWeight: FontWeight.w700),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: TextField(
+                                          controller: costCtrl,
+                                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                          style: const TextStyle(fontWeight: FontWeight.w700),
+                                          decoration: const InputDecoration(
+                                            labelText: 'Κόστος',
+                                            hintText: '0',
+                                            suffixText: '€',
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  TextField(
+                                    controller: providerCtrl,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Εταιρεία / Κέντρο (προαιρετικό)',
+                                      hintText: 'π.χ. Autovision, Anytime',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  TextField(
+                                    controller: phoneCtrl,
+                                    keyboardType: TextInputType.phone,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Τηλέφωνο Οδικής / Ραντεβού (προαιρετικό)',
+                                    ),
+                                  ),
+                                ],
                               ),
-                              child: Text(
-                                CarakiTheme.formatDate(dueDate),
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton(
+                              onPressed: save,
+                              child: const Text(
+                                'Αποθήκευση Υπενθύμισης',
+                                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            controller: costCtrl,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            decoration: const InputDecoration(
-                              labelText: 'Κόστος (€)',
-                              prefixIcon: Icon(Icons.euro_rounded),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: providerCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Εταιρεία / Κέντρο (π.χ. Autovision ΚΤΕΟ, Anytime)',
-                        prefixIcon: Icon(Icons.business_rounded),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: policyCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Αρ. Συμβολαίου / Δελτίου',
-                              prefixIcon: Icon(Icons.badge_rounded),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            controller: phoneCtrl,
-                            keyboardType: TextInputType.phone,
-                            decoration: const InputDecoration(
-                              labelText: 'Τηλ. Οδικής / Κέντρου',
-                              prefixIcon: Icon(Icons.phone_in_talk_rounded),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: notesCtrl,
-                      maxLines: 2,
-                      decoration: const InputDecoration(
-                        labelText: 'Σημειώσεις (καλύψεις, δικαιολογητικά, κωδικός πληρωμής RF)',
-                        prefixIcon: Icon(Icons.notes_rounded),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: FilledButton.icon(
-                        onPressed: () async {
-                          final cost = double.tryParse(costCtrl.text.replaceAll(',', '.').trim()) ?? 0.0;
-                          final reminder = LegalReminder(
-                            id: existing?.id ?? 'rem-${DateTime.now().millisecondsSinceEpoch}',
-                            vehicleId: vehicle.id,
-                            type: selectedType,
-                            customTitle: titleCtrl.text.trim().isEmpty
-                                ? selectedType.title
-                                : titleCtrl.text.trim(),
-                            issueDate: existing?.issueDate ?? DateTime.now(),
-                            dueDate: dueDate,
-                            cost: cost,
-                            providerOrCenter: providerCtrl.text.trim(),
-                            policyOrRefNumber: policyCtrl.text.trim(),
-                            emergencyPhone: phoneCtrl.text.trim(),
-                            notes: notesCtrl.text.trim(),
-                          );
-                          await state.addOrUpdateReminder(reminder);
-                          if (ctx.mounted) Navigator.of(ctx).pop();
-                        },
-                        icon: const Icon(Icons.notifications_active_rounded),
-                        label: const Text(
-                          'Αποθήκευση Υπενθύμισης',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                        ),
+                        ],
                       ),
                     ),
                   ],
@@ -893,7 +924,7 @@ class CarakiModals {
     );
   }
 
-  /// 5. Add Fuel Fill-up Sheet
+  /// 5. Clean Fuel Fill-up Sheet
   static Future<void> showAddFuelSheet(
     BuildContext context,
     CarakiState state,
@@ -901,214 +932,134 @@ class CarakiModals {
   ) async {
     final now = DateTime.now();
     DateTime selectedDate = now;
-    bool isFullTank = true;
 
     final odoCtrl = TextEditingController(
-      text: (vehicle.estimatedOdometerKm(now) + 150).toString(),
+      text: (vehicle.estimatedOdometerKm(now) + 120).toString(),
     );
-    final litersCtrl = TextEditingController(text: '32.0');
-    final pricePerLiterCtrl = TextEditingController(text: '1.849');
-    final totalCostCtrl = TextEditingController(text: '59.17');
+    final litersCtrl = TextEditingController(text: '');
+    final totalCostCtrl = TextEditingController(text: '');
     final stationCtrl = TextEditingController(text: '');
-    final notesCtrl = TextEditingController(text: '');
-
-    void recalcTotal() {
-      final l = double.tryParse(litersCtrl.text.replaceAll(',', '.')) ?? 0;
-      final p = double.tryParse(pricePerLiterCtrl.text.replaceAll(',', '.')) ?? 0;
-      if (l > 0 && p > 0) {
-        totalCostCtrl.text = (l * p).toStringAsFixed(2);
-      }
-    }
 
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
+            Future<void> save() async {
+              final odo = int.tryParse(odoCtrl.text.trim()) ?? vehicle.currentOdometerKm;
+              final total = double.tryParse(totalCostCtrl.text.replaceAll(',', '.').trim()) ?? 0.0;
+              final liters = double.tryParse(litersCtrl.text.replaceAll(',', '.').trim()) ??
+                  (total > 0 ? total / 1.85 : 0.0);
+              final pricePerLiter = liters > 0 ? total / liters : 1.85;
+
+              final entry = FuelEntry(
+                id: 'fuel-${DateTime.now().millisecondsSinceEpoch}',
+                vehicleId: vehicle.id,
+                date: selectedDate,
+                odometerKm: odo,
+                liters: liters,
+                pricePerLiter: pricePerLiter,
+                totalCost: total,
+                isFullTank: true,
+                stationName: stationCtrl.text.trim(),
+              );
+              await state.addFuelEntry(entry);
+              if (ctx.mounted) Navigator.of(ctx).pop();
+            }
+
             return Padding(
-              padding: EdgeInsets.only(
-                left: 20,
-                right: 20,
-                top: 20,
-                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-              ),
+              padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 24),
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: CarakiTheme.statusAmber.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(Icons.local_gas_station_rounded, color: CarakiTheme.statusAmber),
-                        ),
-                        const SizedBox(width: 12),
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Καταγραφή Ανεφοδιασμού Καυσίμου',
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    _buildSheetHeader(ctx, title: 'Καταγραφή Καυσίμων', onSave: save),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        children: [
+                          Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: TextField(
+                                          controller: totalCostCtrl,
+                                          autofocus: true,
+                                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                                          decoration: const InputDecoration(
+                                            labelText: 'Ποσό (€)',
+                                            hintText: '50',
+                                            suffixText: '€',
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: TextField(
+                                          controller: litersCtrl,
+                                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                                          decoration: const InputDecoration(
+                                            labelText: 'Λίτρα',
+                                            hintText: '28.5',
+                                            suffixText: 'L',
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: TextField(
+                                          controller: odoCtrl,
+                                          keyboardType: TextInputType.number,
+                                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                          decoration: const InputDecoration(
+                                            labelText: 'Χιλιόμετρα κοντέρ',
+                                            suffixText: 'χλμ',
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: TextField(
+                                          controller: stationCtrl,
+                                          decoration: const InputDecoration(
+                                            labelText: 'Πρατήριο (προαιρ.)',
+                                            hintText: 'π.χ. Shell',
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
-                              Text(
-                                'Ενημερώνει αυτόματα και τα χιλιόμετρα του οχήματος!',
-                                style: TextStyle(fontSize: 12.5, color: Colors.grey),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton(
+                              onPressed: save,
+                              child: const Text(
+                                'Αποθήκευση Ανεφοδιασμού',
+                                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                               ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: odoCtrl,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                            decoration: const InputDecoration(
-                              labelText: 'Χιλιόμετρα Κοντέρ',
-                              prefixIcon: Icon(Icons.speed_rounded),
-                              suffixText: 'χλμ',
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(14),
-                            onTap: () async {
-                              final picked = await showDatePicker(
-                                context: ctx,
-                                initialDate: selectedDate,
-                                firstDate: DateTime(2015),
-                                lastDate: DateTime.now(),
-                              );
-                              if (picked != null) {
-                                setModalState(() => selectedDate = picked);
-                              }
-                            },
-                            child: InputDecorator(
-                              decoration: const InputDecoration(
-                                labelText: 'Ημερομηνία',
-                                prefixIcon: Icon(Icons.calendar_today_rounded),
-                              ),
-                              child: Text(CarakiTheme.formatDate(selectedDate)),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: litersCtrl,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            onChanged: (_) => recalcTotal(),
-                            decoration: const InputDecoration(
-                              labelText: 'Λίτρα (L)',
-                              suffixText: 'L',
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            controller: pricePerLiterCtrl,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            onChanged: (_) => recalcTotal(),
-                            decoration: const InputDecoration(
-                              labelText: 'Τιμή / Λίτρο',
-                              suffixText: '€/L',
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            controller: totalCostCtrl,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            decoration: const InputDecoration(
-                              labelText: 'Σύνολο (€)',
-                              suffixText: '€',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: stationCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Πρατήριο (π.χ. Shell, EKO)',
-                              prefixIcon: Icon(Icons.ev_station_rounded),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        FilterChip(
-                          label: const Text('Πλήρες Γέμισμα'),
-                          selected: isFullTank,
-                          onSelected: (val) => setModalState(() => isFullTank = val),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: notesCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Σημείωση (π.χ. Ταξίδι Εθνική Οδό, 98 οκτάνια)',
-                        prefixIcon: Icon(Icons.notes_rounded),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: FilledButton.icon(
-                        onPressed: () async {
-                          final odo = int.tryParse(odoCtrl.text.trim()) ?? vehicle.currentOdometerKm;
-                          final liters = double.tryParse(litersCtrl.text.replaceAll(',', '.').trim()) ?? 0.0;
-                          final price = double.tryParse(pricePerLiterCtrl.text.replaceAll(',', '.').trim()) ?? 0.0;
-                          final total = double.tryParse(totalCostCtrl.text.replaceAll(',', '.').trim()) ?? (liters * price);
-
-                          final entry = FuelEntry(
-                            id: 'fuel-${DateTime.now().millisecondsSinceEpoch}',
-                            vehicleId: vehicle.id,
-                            date: selectedDate,
-                            odometerKm: odo,
-                            liters: liters,
-                            pricePerLiter: price,
-                            totalCost: total,
-                            isFullTank: isFullTank,
-                            stationName: stationCtrl.text.trim(),
-                            notes: notesCtrl.text.trim(),
-                          );
-                          await state.addFuelEntry(entry);
-                          if (ctx.mounted) Navigator.of(ctx).pop();
-                        },
-                        icon: const Icon(Icons.add_task_rounded),
-                        label: const Text(
-                          'Αποθήκευση Ανεφοδιασμού',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                        ),
+                        ],
                       ),
                     ),
                   ],
@@ -1121,7 +1072,7 @@ class CarakiModals {
     );
   }
 
-  /// 6. Add / Edit Vehicle in Garage Dialog
+  /// 6. Clean Add / Edit Vehicle Sheet
   static Future<void> showAddOrEditVehicleSheet(
     BuildContext context,
     CarakiState state, {
@@ -1135,300 +1086,297 @@ class CarakiModals {
     final yearCtrl = TextEditingController(text: (existing?.year ?? 2022).toString());
     final plateCtrl = TextEditingController(text: existing?.licensePlate ?? '');
     final odoCtrl = TextEditingController(text: (existing?.currentOdometerKm ?? 45000).toString());
-    final avgKmCtrl = TextEditingController(text: (existing?.averageMonthlyKm ?? 1000).toString());
-
-    final vinCtrl = TextEditingController(text: existing?.vin ?? '');
-    final engineCtrl = TextEditingController(text: existing?.engineCode ?? '');
-    final ccCtrl = TextEditingController(text: (existing?.engineCc ?? 1400).toString());
     final hpCtrl = TextEditingController(text: (existing?.horsepower ?? 110).toString());
-    final colorCtrl = TextEditingController(text: existing?.colorName ?? 'Ασημί / Γκρι');
 
-    final oilSpecCtrl = TextEditingController(text: existing?.oilSpec ?? '5W-30 Full Synthetic');
+    final oilSpecCtrl = TextEditingController(text: existing?.oilSpec ?? '5W-30');
     final tireDimCtrl = TextEditingController(text: existing?.tireDimension ?? '205/55 R16');
-    final tirePsiCtrl = TextEditingController(text: existing?.tirePressurePsi ?? '33 PSI Εμπρός / 31 PSI Πίσω');
-    final batterySpecCtrl = TextEditingController(text: existing?.batterySpec ?? '12V 60Ah EFB');
-    final wiperCtrl = TextEditingController(text: existing?.wiperSize ?? '600mm / 400mm');
+    final tirePsiCtrl = TextEditingController(text: existing?.tirePressurePsi ?? '33 PSI');
+    final vinCtrl = TextEditingController(text: existing?.vin ?? '');
 
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
+            Future<void> save() async {
+              final make = makeCtrl.text.trim().isEmpty ? 'Όχημα' : makeCtrl.text.trim();
+              final model = modelCtrl.text.trim().isEmpty ? 'Μοντέλο' : modelCtrl.text.trim();
+              final odo = int.tryParse(odoCtrl.text.trim()) ?? 0;
+              final now = DateTime.now();
+
+              final partConfigs = existing?.partConfigs ??
+                  {
+                    for (final pt in PartType.values)
+                      pt: PartSpecConfig(
+                        partType: pt,
+                        intervalKm: pt.defaultIntervalKm,
+                        intervalMonths: pt.defaultIntervalMonths,
+                        lastServiceKm: odo,
+                        lastServiceDate: now,
+                      ),
+                  };
+
+              final vehicle = Vehicle(
+                id: existing?.id ?? 'veh-${DateTime.now().millisecondsSinceEpoch}',
+                type: selectedType,
+                make: make,
+                model: model,
+                year: int.tryParse(yearCtrl.text.trim()) ?? 2022,
+                licensePlate: plateCtrl.text.trim().isEmpty ? 'ΑΒΓ-1234' : plateCtrl.text.trim(),
+                vin: vinCtrl.text.trim(),
+                horsepower: int.tryParse(hpCtrl.text.trim()) ?? 100,
+                fuelType: selectedFuel,
+                currentOdometerKm: odo,
+                lastOdometerUpdate: existing?.lastOdometerUpdate ?? now,
+                oilSpec: oilSpecCtrl.text.trim(),
+                tireDimension: tireDimCtrl.text.trim(),
+                tirePressurePsi: tirePsiCtrl.text.trim(),
+                partConfigs: partConfigs,
+                isDemo: false,
+              );
+
+              await state.addOrUpdateVehicle(vehicle);
+              if (ctx.mounted) Navigator.of(ctx).pop();
+            }
+
+            final onSurface = Theme.of(ctx).colorScheme.onSurface;
+
             return DraggableScrollableSheet(
               expand: false,
-              initialChildSize: 0.9,
+              initialChildSize: 0.88,
               minChildSize: 0.6,
               maxChildSize: 0.96,
               builder: (_, scrollController) {
-                return ListView(
-                  controller: scrollController,
-                  padding: EdgeInsets.only(
-                    left: 20,
-                    right: 20,
-                    top: 16,
-                    bottom: MediaQuery.of(ctx).viewInsets.bottom + 28,
-                  ),
+                return Column(
                   children: [
-                    Text(
-                      existing == null ? 'Προσθήκη Νέου Οχήματος στο Γκαράζ' : 'Επεξεργασία Οχήματος',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    _buildSheetHeader(
+                      ctx,
+                      title: existing == null ? 'Νέο Όχημα' : 'Επεξεργασία Οχήματος',
+                      onSave: save,
                     ),
-                    const SizedBox(height: 14),
-                    SegmentedButton<VehicleType>(
-                      segments: VehicleType.values
-                          .map((vt) => ButtonSegment(
-                                value: vt,
-                                icon: Icon(vt.icon),
-                                label: Text(vt.label),
-                              ))
-                          .toList(),
-                      selected: {selectedType},
-                      onSelectionChanged: (s) => setModalState(() => selectedType = s.first),
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: makeCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Μάρκα (π.χ. Toyota, VW)',
-                            ),
-                          ),
+                    Expanded(
+                      child: ListView(
+                        controller: scrollController,
+                        padding: EdgeInsets.fromLTRB(
+                          20,
+                          4,
+                          20,
+                          MediaQuery.of(ctx).viewInsets.bottom + 32,
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            controller: modelCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Μοντέλο (π.χ. Yaris, Golf)',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: plateCtrl,
-                            textCapitalization: TextCapitalization.characters,
-                            decoration: const InputDecoration(
-                              labelText: 'Πινακίδα (π.χ. ΙΖΜ-8492)',
-                              prefixIcon: Icon(Icons.pin_rounded),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            controller: yearCtrl,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                            decoration: const InputDecoration(
-                              labelText: 'Έτος Κυκλοφορίας',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: odoCtrl,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                            decoration: const InputDecoration(
-                              labelText: 'Τρέχοντα Χιλιόμετρα',
-                              suffixText: 'χλμ',
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            controller: avgKmCtrl,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                            decoration: const InputDecoration(
-                              labelText: 'Μέσος Όρος / Μήνα',
-                              suffixText: 'χλμ',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<FuelType>(
-                      initialValue: selectedFuel,
-                      decoration: const InputDecoration(
-                        labelText: 'Καύσιμο / Κινητήρας',
-                        prefixIcon: Icon(Icons.local_gas_station_rounded),
-                      ),
-                      items: FuelType.values
-                          .map((f) => DropdownMenuItem(value: f, child: Text(f.label)))
-                          .toList(),
-                      onChanged: (val) {
-                        if (val != null) setModalState(() => selectedFuel = val);
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Τεχνική Ταυτότητα & Quick Specs (για γρήγορη εύρεση)',
-                      style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: vinCtrl,
-                      textCapitalization: TextCapitalization.characters,
-                      decoration: const InputDecoration(
-                        labelText: 'Αριθμός Πλαισίου (VIN - 17 χαρακτήρες)',
-                        prefixIcon: Icon(Icons.qr_code_rounded),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: engineCtrl,
-                            decoration: const InputDecoration(labelText: 'Κωδικός Κινητήρα'),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextField(
-                            controller: ccCtrl,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'Κυβικά (cc)'),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextField(
-                            controller: hpCtrl,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'Ίπποι (HP)'),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: oilSpecCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Προδιαγραφή Λαδιών (π.χ. 5W-30 API SP • 4.2L)',
-                        prefixIcon: Icon(Icons.oil_barrel_rounded),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: tireDimCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Διάσταση Ελαστικών',
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            controller: tirePsiCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Πίεση Ελαστικών (PSI/Bar)',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: batterySpecCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Τύπος Μπαταρίας',
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            controller: wiperCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Υαλοκαθαριστήρες (mm)',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      height: 52,
-                      child: FilledButton.icon(
-                        onPressed: () async {
-                          final make = makeCtrl.text.trim().isEmpty ? 'Όχημα' : makeCtrl.text.trim();
-                          final model = modelCtrl.text.trim().isEmpty ? 'Μοντέλο' : modelCtrl.text.trim();
-                          final odo = int.tryParse(odoCtrl.text.trim()) ?? 0;
-                          final now = DateTime.now();
-
-                          final partConfigs = existing?.partConfigs ??
-                              {
-                                for (final pt in PartType.values)
-                                  pt: PartSpecConfig(
-                                    partType: pt,
-                                    intervalKm: pt.defaultIntervalKm,
-                                    intervalMonths: pt.defaultIntervalMonths,
-                                    lastServiceKm: odo,
-                                    lastServiceDate: now,
+                        children: [
+                          // Vehicle Type Selector Pills
+                          Row(
+                            children: VehicleType.values.map((vt) {
+                              final isSelected = vt == selectedType;
+                              return Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                                  child: BouncyTap(
+                                    onTap: () => setModalState(() => selectedType = vt),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(vertical: 10),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? CarakiTheme.primaryPapaya
+                                            : Theme.of(ctx).colorScheme.surface,
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          Icon(
+                                            vt.icon,
+                                            size: 20,
+                                            color: isSelected ? Colors.white : onSurface,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            vt.label.split(' ').first,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                              color: isSelected ? Colors.white : onSurface,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ),
-                              };
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 16),
 
-                          final vehicle = Vehicle(
-                            id: existing?.id ?? 'veh-${DateTime.now().millisecondsSinceEpoch}',
-                            type: selectedType,
-                            make: make,
-                            model: model,
-                            year: int.tryParse(yearCtrl.text.trim()) ?? 2022,
-                            licensePlate: plateCtrl.text.trim().isEmpty ? 'ΑΒΓ-1234' : plateCtrl.text.trim(),
-                            vin: vinCtrl.text.trim(),
-                            engineCode: engineCtrl.text.trim(),
-                            engineCc: int.tryParse(ccCtrl.text.trim()) ?? 1400,
-                            horsepower: int.tryParse(hpCtrl.text.trim()) ?? 100,
-                            fuelType: selectedFuel,
-                            colorName: colorCtrl.text.trim(),
-                            currentOdometerKm: odo,
-                            lastOdometerUpdate: existing?.lastOdometerUpdate ?? now,
-                            averageMonthlyKm: int.tryParse(avgKmCtrl.text.trim()) ?? 1000,
-                            oilSpec: oilSpecCtrl.text.trim(),
-                            tireDimension: tireDimCtrl.text.trim(),
-                            tirePressurePsi: tirePsiCtrl.text.trim(),
-                            batterySpec: batterySpecCtrl.text.trim(),
-                            wiperSize: wiperCtrl.text.trim(),
-                            partConfigs: partConfigs,
-                            isDemo: false,
-                          );
+                          const Text(
+                            'Βασικά Στοιχεία',
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 8),
+                          Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: TextField(
+                                          controller: makeCtrl,
+                                          decoration: const InputDecoration(
+                                            labelText: 'Μάρκα',
+                                            hintText: 'π.χ. Toyota',
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: TextField(
+                                          controller: modelCtrl,
+                                          decoration: const InputDecoration(
+                                            labelText: 'Μοντέλο',
+                                            hintText: 'π.χ. Yaris',
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: TextField(
+                                          controller: plateCtrl,
+                                          textCapitalization: TextCapitalization.characters,
+                                          decoration: const InputDecoration(
+                                            labelText: 'Πινακίδα',
+                                            hintText: 'ΙΖΜ-8492',
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: TextField(
+                                          controller: yearCtrl,
+                                          keyboardType: TextInputType.number,
+                                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                          decoration: const InputDecoration(
+                                            labelText: 'Έτος',
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: TextField(
+                                          controller: odoCtrl,
+                                          keyboardType: TextInputType.number,
+                                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                          decoration: const InputDecoration(
+                                            labelText: 'Χιλιόμετρα',
+                                            suffixText: 'χλμ',
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: TextField(
+                                          controller: hpCtrl,
+                                          keyboardType: TextInputType.number,
+                                          decoration: const InputDecoration(
+                                            labelText: 'Ίπποι (HP)',
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  DropdownButtonFormField<FuelType>(
+                                    initialValue: selectedFuel,
+                                    decoration: const InputDecoration(labelText: 'Καύσιμο'),
+                                    items: FuelType.values
+                                        .map((f) => DropdownMenuItem(value: f, child: Text(f.label)))
+                                        .toList(),
+                                    onChanged: (val) {
+                                      if (val != null) setModalState(() => selectedFuel = val);
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 18),
 
-                          await state.addOrUpdateVehicle(vehicle);
-                          if (ctx.mounted) Navigator.of(ctx).pop();
-                        },
-                        icon: const Icon(Icons.check_circle_rounded),
-                        label: Text(
-                          existing == null ? 'Προσθήκη Οχήματος' : 'Αποθήκευση Αλλαγών',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                        ),
+                          const Text(
+                            'Τεχνικές Προδιαγραφές (Προαιρετικό)',
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 8),
+                          Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                children: [
+                                  TextField(
+                                    controller: oilSpecCtrl,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Τύπος Λαδιών (π.χ. 5W-30)',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: TextField(
+                                          controller: tireDimCtrl,
+                                          decoration: const InputDecoration(
+                                            labelText: 'Ελαστικά',
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: TextField(
+                                          controller: tirePsiCtrl,
+                                          decoration: const InputDecoration(
+                                            labelText: 'Πίεση (PSI)',
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  TextField(
+                                    controller: vinCtrl,
+                                    textCapitalization: TextCapitalization.characters,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Αριθμός Πλαισίου (VIN)',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            height: 52,
+                            child: FilledButton(
+                              onPressed: save,
+                              child: Text(
+                                existing == null ? 'Προσθήκη Οχήματος' : 'Αποθήκευση Αλλαγών',
+                                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -1438,6 +1386,39 @@ class CarakiModals {
           },
         );
       },
+    );
+  }
+}
+
+class _PresetPill extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+
+  const _PresetPill({
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    return BouncyTap(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: onSurface.withValues(alpha: 0.8),
+          ),
+        ),
+      ),
     );
   }
 }
